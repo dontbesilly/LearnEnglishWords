@@ -1,3 +1,5 @@
+using AutoMapper;
+using LearnEnglishWords.Dto;
 using LearnEnglishWords.Models;
 using LearnEnglishWords.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -61,8 +63,10 @@ public class WordApi : IApi
         return Results.Ok(word);
     }
 
-    private async Task<IResult> CreateWord([FromBody] Word word)
+    private async Task<IResult> CreateWord([FromBody] WordDto dto, [FromServices] IMapper mapper)
     {
+        var word = mapper.Map<Word>(dto);
+
         await wordRepository.CreateWord(word);
         return Results.Created(nameof(CreateWord), new {word.Id});
     }

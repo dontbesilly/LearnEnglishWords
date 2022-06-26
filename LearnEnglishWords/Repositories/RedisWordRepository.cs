@@ -1,6 +1,7 @@
-using System.Text.Json;
 using LearnEnglishWords.Models;
+using Newtonsoft.Json;
 using StackExchange.Redis;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace LearnEnglishWords.Repositories;
 
@@ -23,11 +24,20 @@ public class RedisWordRepository : IWordRepository
             throw new ArgumentOutOfRangeException(nameof(word));
 
         var db = redis.GetDatabase();
-        var serialWord = JsonSerializer.Serialize(word);
+
+        var hashEntries = await db.HashGetAllAsync(HashSetName);
+        var words = Array.ConvertAll(hashEntries, val =>
+            JsonConvert.DeserializeAnonymousType(val.Value, new {Name = ""})).ToList();
+
+        if (words.FirstOrDefault(x => x.Name == word.Name) != null)
+        {
+            // TODO
+            throw new Exception("Already created");
+        }
 
         await db.HashSetAsync(HashSetName, new HashEntry[]
         {
-            new(word.Id, serialWord)
+            new(word.Id, JsonSerializer.Serialize(word))
         });
     }
 
@@ -38,7 +48,10 @@ public class RedisWordRepository : IWordRepository
         var word = await db.HashGetAsync(HashSetName, id);
 
         if (string.IsNullOrEmpty(word))
-            return null; // TODO
+        {
+            // TODO
+            throw new Exception("Not found");
+        }
 
         return JsonSerializer.Deserialize<Word>(word);
     }
@@ -65,13 +78,9 @@ public class RedisWordRepository : IWordRepository
         var keys = await db.HashKeysAsync(HashSetName);
 
         var randomKey = random.Next(0, keys.Length);
-        var value = keys[randomKey];
 
-        var word = await db.HashGetAsync(HashSetName, value);
+        var redisValue = await db.HashGetAsync(HashSetName, keys[randomKey]);
 
-        if (string.IsNullOrEmpty(word))
-            return null; // TODO
-
-        return JsonSerializer.Deserialize<Word>(word);
+        return JsonSerializer.Deserialize<Word>(redisValue);
     }
 }

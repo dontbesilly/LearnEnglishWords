@@ -1,3 +1,4 @@
+using System.Reflection;
 using LearnEnglishWords.Repositories;
 using LearnEnglishWords.WebApi;
 using StackExchange.Redis;
@@ -28,6 +29,8 @@ void RegisterServices(IServiceCollection services)
     services.AddSwaggerGen();
 
     services.AddTransient<IApi, WordApi>();
+
+    services.AddAutoMapper(Assembly.GetExecutingAssembly());
 }
 
 void Configure(IApplicationBuilder app)
