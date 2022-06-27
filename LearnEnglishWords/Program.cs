@@ -1,6 +1,9 @@
+using System.Net.Mime;
 using System.Reflection;
+using LearnEnglishWords.Exceptions;
 using LearnEnglishWords.Repositories;
 using LearnEnglishWords.WebApi;
+using Microsoft.AspNetCore.Diagnostics;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +38,28 @@ void RegisterServices(IServiceCollection services)
 
 void Configure(IApplicationBuilder app)
 {
+    app.UseExceptionHandler(exceptionHandlerApp =>
+    {
+        exceptionHandlerApp.Run(async context =>
+        {
+            context.Response.ContentType = MediaTypeNames.Text.Plain;
+
+            var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+
+            context.Response.StatusCode = exceptionHandlerPathFeature?.Error switch
+            {
+                NotFoundException => StatusCodes.Status404NotFound,
+                AlreadyCreatedException => StatusCodes.Status400BadRequest,
+                _ => StatusCodes.Status500InternalServerError
+            };
+
+            if (exceptionHandlerPathFeature?.Error != null)
+                await context.Response.WriteAsync(exceptionHandlerPathFeature.Error.Message);
+            else
+                await context.Response.WriteAsync("Something wrong");
+        });
+    });
+
     app.UseHttpsRedirection();
 
     app.UseCors("CorsPolicy");

@@ -1,3 +1,4 @@
+using LearnEnglishWords.Exceptions;
 using LearnEnglishWords.Models;
 using Newtonsoft.Json;
 using StackExchange.Redis;
@@ -31,8 +32,7 @@ public class RedisWordRepository : IWordRepository
 
         if (words.FirstOrDefault(x => x.Name == word.Name) != null)
         {
-            // TODO
-            throw new Exception("Already created");
+            throw new AlreadyCreatedException("Already created");
         }
 
         await db.HashSetAsync(HashSetName, new HashEntry[]
@@ -49,8 +49,7 @@ public class RedisWordRepository : IWordRepository
 
         if (string.IsNullOrEmpty(word))
         {
-            // TODO
-            throw new Exception("Not found");
+            throw new NotFoundException("Not found");
         }
 
         return JsonSerializer.Deserialize<Word>(word);
