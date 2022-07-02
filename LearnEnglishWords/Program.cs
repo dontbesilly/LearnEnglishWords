@@ -26,7 +26,13 @@ void RegisterServices(IServiceCollection services)
     services.AddTransient<IWordRepository, RedisWordRepository>();
 
     services.AddCors(opt => opt.AddPolicy("CorsPolicy",
-        c => { c.WithOrigins("http://localhost:3000"); }));
+        c =>
+        {
+            c.AllowAnyHeader();
+            c.SetIsOriginAllowed(s => true);
+            c.AllowCredentials();
+            c.AllowAnyMethod();
+        }));
 
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen();
