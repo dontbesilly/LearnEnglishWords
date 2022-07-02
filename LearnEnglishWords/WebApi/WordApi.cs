@@ -53,7 +53,7 @@ public class WordApi : IApi
         return Results.Ok(result);
     }
 
-    private async Task<IResult> GetWordById([FromQuery] string id)
+    private async Task<IResult> GetWordById([FromRoute] string id)
     {
         var word = await wordRepository.GetWordById(id);
 
