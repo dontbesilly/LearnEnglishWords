@@ -10,12 +10,12 @@ public class RedisWordRepository : IWordRepository
 {
     private const string HashSetName = "hashwords";
 
-    private readonly IConnectionMultiplexer redis;
+    private readonly IDatabase database;
     private readonly Random random;
 
     public RedisWordRepository(IConnectionMultiplexer redis)
     {
-        this.redis = redis;
+        database = redis.GetDatabase();
         random = new Random();
     }
 
@@ -24,9 +24,7 @@ public class RedisWordRepository : IWordRepository
         if (word == null)
             throw new ArgumentOutOfRangeException(nameof(word));
 
-        var db = redis.GetDatabase();
-
-        var hashEntries = await db.HashGetAllAsync(HashSetName);
+        var hashEntries = await database.HashGetAllAsync(HashSetName);
         var words = Array.ConvertAll(hashEntries, val =>
             JsonConvert.DeserializeAnonymousType(val.Value, new {Name = ""})).ToList();
 
@@ -35,7 +33,7 @@ public class RedisWordRepository : IWordRepository
             throw new AlreadyCreatedException("Already created");
         }
 
-        await db.HashSetAsync(HashSetName, new HashEntry[]
+        await database.HashSetAsync(HashSetName, new HashEntry[]
         {
             new(word.Id, JsonSerializer.Serialize(word))
         });
@@ -43,23 +41,19 @@ public class RedisWordRepository : IWordRepository
 
     public async Task<Word> GetWordById(string id)
     {
-        var db = redis.GetDatabase();
+        var redisValue = await database.HashGetAsync(HashSetName, id);
 
-        var word = await db.HashGetAsync(HashSetName, id);
-
-        if (string.IsNullOrEmpty(word))
+        if (string.IsNullOrEmpty(redisValue))
         {
             throw new NotFoundException("Not found");
         }
 
-        return JsonSerializer.Deserialize<Word>(word);
+        return JsonSerializer.Deserialize<Word>(redisValue);
     }
 
     public async Task<IEnumerable<Word>> GetAllWords()
     {
-        var db = redis.GetDatabase();
-
-        var hashEntries = await db.HashGetAllAsync(HashSetName);
+        var hashEntries = await database.HashGetAllAsync(HashSetName);
 
         if (hashEntries.Length <= 0)
             return new List<Word>();
@@ -72,14 +66,39 @@ public class RedisWordRepository : IWordRepository
 
     public async Task<Word> GetRandomWord()
     {
-        var db = redis.GetDatabase();
-
-        var keys = await db.HashKeysAsync(HashSetName);
+        var keys = await database.HashKeysAsync(HashSetName);
 
         var randomKey = random.Next(0, keys.Length);
 
-        var redisValue = await db.HashGetAsync(HashSetName, keys[randomKey]);
+        var redisValue = await database.HashGetAsync(HashSetName, keys[randomKey]);
 
         return JsonSerializer.Deserialize<Word>(redisValue);
+    }
+
+    public async Task EditWord(string id, Word word)
+    {
+        var redisValue = await database.HashGetAsync(HashSetName, id);
+
+        if (string.IsNullOrEmpty(redisValue))
+        {
+            throw new NotFoundException("Not found");
+        }
+
+        await database.HashSetAsync(HashSetName, new HashEntry[]
+        {
+            new(word.Id, JsonSerializer.Serialize(word))
+        });
+    }
+
+    public async Task DeleteWord(string id)
+    {
+        var word = await database.HashGetAsync(HashSetName, id);
+
+        if (string.IsNullOrEmpty(word))
+        {
+            throw new NotFoundException("Not found");
+        }
+
+        await database.HashDeleteAsync(HashSetName, id, CommandFlags.FireAndForget);
     }
 }

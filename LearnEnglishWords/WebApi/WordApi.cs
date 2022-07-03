@@ -17,9 +17,9 @@ public class WordApi : IApi
 
     public void Register(WebApplication app)
     {
-        app.MapPost("/api/word", CreateWord)
-            .Produces<Word>(StatusCodes.Status201Created)
-            .WithName(nameof(CreateWord))
+        app.MapGet("/api/word", GetAll)
+            .Produces<List<Word>>(StatusCodes.Status200OK)
+            .WithName(nameof(GetAll))
             .WithTags("Word");
 
         app.MapGet("/api/word/{id}", GetWordById)
@@ -28,9 +28,21 @@ public class WordApi : IApi
             .WithName(nameof(GetWordById))
             .WithTags("Word");
 
-        app.MapGet("/api/word", GetAll)
-            .Produces<List<Word>>(StatusCodes.Status200OK)
-            .WithName(nameof(GetAll))
+        app.MapPost("/api/word", CreateWord)
+            .Produces<Word>(StatusCodes.Status201Created)
+            .WithName(nameof(CreateWord))
+            .WithTags("Word");
+
+        app.MapPut("/api/word/{id}", EditWord)
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithName(nameof(EditWord))
+            .WithTags("Word");
+
+        app.MapDelete("/api/word/{id}", DeleteWord)
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithName(nameof(DeleteWord))
             .WithTags("Word");
 
         app.MapGet("/api/word/random", GetRandomWord)
@@ -57,9 +69,6 @@ public class WordApi : IApi
     {
         var word = await wordRepository.GetWordById(id);
 
-        if (word is null)
-            return await Task.FromResult(Results.NotFound());
-
         return Results.Ok(word);
     }
 
@@ -68,6 +77,24 @@ public class WordApi : IApi
         var word = mapper.Map<Word>(dto);
 
         await wordRepository.CreateWord(word);
+
         return Results.Created(nameof(CreateWord), new {word.Id});
+    }
+
+    private async Task<IResult> EditWord([FromRoute] string id, [FromBody] WordDto dto, [FromServices] IMapper mapper)
+    {
+        var word = mapper.Map<Word>(dto);
+        word.Id = id;
+
+        await wordRepository.EditWord(id, word);
+
+        return Results.Ok();
+    }
+
+    private async Task<IResult> DeleteWord([FromRoute] string id)
+    {
+        await wordRepository.DeleteWord(id);
+
+        return Results.Ok();
     }
 }

@@ -2,7 +2,7 @@ namespace LearnEnglishWords.Models;
 
 public class Word
 {
-    public string Id { get; init; } = $"word:{Guid.NewGuid()}";
-    public string Name { get; init; }
-    public string Translate { get; init; }
+    public string Id { get; set; } = $"word:{Guid.NewGuid()}";
+    public string Name { get; set; }
+    public string Translate { get; set; }
 }
