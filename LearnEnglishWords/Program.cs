@@ -85,3 +85,10 @@ void RegisterApi()
         api.Register(webApplication);
     }
 }
+
+/// <summary>
+/// For integration tests
+/// </summary>
+public partial class Program
+{
+}
